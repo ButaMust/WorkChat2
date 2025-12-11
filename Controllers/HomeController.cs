@@ -2,7 +2,7 @@ using System.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
 using WorkChat2.Models;
 
-namespace WorkChat2.Controllers
+namespace WorkChat.Controllers
 {
     public class HomeController : Controller
     {
