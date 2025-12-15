@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using WorkChat2.Models;
 using WorkChat2.ViewModels;
 
@@ -18,64 +19,187 @@ namespace WorkChat2.Controllers
             _roleManager = roleManager;
         }
 
-        // GET: /Admin
-        public IActionResult Index()
-        {
-            return View();
-        }
+        public IActionResult Index() => View();
 
+        // GET: /Admin/Users?q=...&page=1&pageSize=10
         [HttpGet]
-        public IActionResult CreateUser()
+        public async Task<IActionResult> Users(string? q, int page = 1, int pageSize = 10)
         {
-            return View(new CreateUserViewModel());
-        }
+            page = page < 1 ? 1 : page;
+            pageSize = pageSize is < 5 or > 100 ? 10 : pageSize;
 
-        // POST: /Admin/CreateUser
-        [HttpPost]
-        public async Task<IActionResult> CreateUser(CreateUserViewModel model)
-        {
-            if (ModelState.IsValid)
-                return View(model);
+            var query = _userManager.Users.AsQueryable();
 
-            var existing = await _userManager.FindByEmailAsync(model.Email);
-            if (existing != null)
+            if (!string.IsNullOrWhiteSpace(q))
             {
-                ModelState.AddModelError("", "A user with this email already exists");
+                var s = q.Trim();
+                query = query.Where(u =>
+                    (u.Email != null && u.Email.Contains(s)) ||
+                    (u.UserName != null && u.UserName.Contains(s)) ||
+                    u.Name.Contains(s) ||
+                    u.LastName.Contains(s));
             }
 
-            var user = new AppUser
+            var totalCount = await query.CountAsync();
+
+            var users = await query
+                .OrderBy(u => u.Email)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync();
+
+            var list = new List<AdminUserListItemVm>();
+            foreach (var u in users)
             {
-                UserName = model.UserName,
-                Email = model.Email,
-                Name = model.Name,
-                LastName = model.LastName,
-                CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow,
-                EmailConfirmed = true
+                var roles = await _userManager.GetRolesAsync(u);
+
+                list.Add(new AdminUserListItemVm
+                {
+                    Id = u.Id,
+                    Email = u.Email ?? "",
+                    UserName = u.UserName ?? "",
+                    Name = u.Name,
+                    LastName = u.LastName,
+                    CreatedAt = u.CreatedAt,
+                    UpdatedAt = u.UpdatedAt,
+                    Roles = roles.ToList()
+                });
+            }
+
+            var vm = new AdminUsersPageVm
+            {
+                Users = list,
+                Q = q,
+                Page = page,
+                PageSize = pageSize,
+                TotalCount = totalCount
             };
 
-            var createResult = await _userManager.CreateAsync(user, model.Password);
-            if (createResult.Succeeded)
+            return View(vm);
+        }
+
+        // POST: /Admin/ToggleAdmin
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ToggleAdmin(string id, string? q, int page = 1, int pageSize = 10)
+        {
+            var user = await _userManager.FindByIdAsync(id);
+            if (user == null) return NotFound();
+
+            var currentUserId = _userManager.GetUserId(User);
+            if (user.Id == currentUserId)
             {
-                foreach (var error in createResult.Errors)
-                {
-                    ModelState.AddModelError("", error.Description);
-                }
-                return View(model);
+                TempData["Error"] = "You can't change your own admin role.";
+                return RedirectToAction(nameof(Users), new { q, page, pageSize });
             }
 
-            if (model.IsAdmin)
-            {
-                if (!await _roleManager.RoleExistsAsync("Admin"))
-                {
-                    await _roleManager.CreateAsync(new IdentityRole("Admin"));
-                }
+            if (!await _roleManager.RoleExistsAsync("Admin"))
+                await _roleManager.CreateAsync(new IdentityRole("Admin"));
 
-                await _userManager.AddToRoleAsync(user, "Admin");
+            var isAdmin = await _userManager.IsInRoleAsync(user, "Admin");
+            IdentityResult result = isAdmin
+                ? await _userManager.RemoveFromRoleAsync(user, "Admin")
+                : await _userManager.AddToRoleAsync(user, "Admin");
+
+            if (!result.Succeeded)
+                TempData["Error"] = string.Join(" | ", result.Errors.Select(e => e.Description));
+
+            return RedirectToAction(nameof(Users), new { q, page, pageSize });
+        }
+
+        // GET: /Admin/ResetPassword?id=...
+        [HttpGet]
+        public async Task<IActionResult> ResetPassword(string id, string? q, int page = 1, int pageSize = 10)
+        {
+            var user = await _userManager.FindByIdAsync(id);
+            if (user == null) return NotFound();
+
+            var vm = new AdminResetPasswordVm
+            {
+                UserId = user.Id,
+                Email = user.Email ?? ""
+            };
+
+            ViewBag.Q = q;
+            ViewBag.Page = page;
+            ViewBag.PageSize = pageSize;
+
+            return View(vm);
+        }
+
+        // POST: /Admin/ResetPassword
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ResetPassword(AdminResetPasswordVm vm, string? q, int page = 1, int pageSize = 10)
+        {
+            if (!ModelState.IsValid)
+            {
+                ViewBag.Q = q;
+                ViewBag.Page = page;
+                ViewBag.PageSize = pageSize;
+                return View(vm);
             }
 
-            return RedirectToAction(nameof(Index));
+            var user = await _userManager.FindByIdAsync(vm.UserId);
+            if (user == null) return NotFound();
+
+            var currentUserId = _userManager.GetUserId(User);
+            if (user.Id == currentUserId)
+            {
+                ModelState.AddModelError("", "You can't reset your own password here.");
+                ViewBag.Q = q;
+                ViewBag.Page = page;
+                ViewBag.PageSize = pageSize;
+                return View(vm);
+            }
+
+            var token = await _userManager.GeneratePasswordResetTokenAsync(user);
+            var result = await _userManager.ResetPasswordAsync(user, token, vm.NewPassword);
+
+            if (!result.Succeeded)
+            {
+                foreach (var e in result.Errors)
+                    ModelState.AddModelError("", e.Description);
+
+                ViewBag.Q = q;
+                ViewBag.Page = page;
+                ViewBag.PageSize = pageSize;
+                return View(vm);
+            }
+
+            TempData["Success"] = $"Password reset for {user.Email}.";
+            return RedirectToAction(nameof(Users), new { q, page, pageSize });
+        }
+
+        // POST: /Admin/DeleteUser
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> DeleteUser(string id, string? q, int page = 1, int pageSize = 10)
+        {
+            var user = await _userManager.FindByIdAsync(id);
+            if (user == null) return NotFound();
+
+            var currentUserId = _userManager.GetUserId(User);
+            if (user.Id == currentUserId)
+            {
+                TempData["Error"] = "You can't delete your own account.";
+                return RedirectToAction(nameof(Users), new { q, page, pageSize });
+            }
+
+            if (string.Equals(user.Email, "admin@local", StringComparison.OrdinalIgnoreCase))
+            {
+                TempData["Error"] = "You can't delete the seeded admin account.";
+                return RedirectToAction(nameof(Users), new { q, page, pageSize });
+            }
+
+            var result = await _userManager.DeleteAsync(user);
+
+            if (!result.Succeeded)
+                TempData["Error"] = string.Join(" | ", result.Errors.Select(e => e.Description));
+            else
+                TempData["Success"] = $"Deleted user {user.Email}.";
+
+            return RedirectToAction(nameof(Users), new { q, page, pageSize });
         }
     }
 }
-     
