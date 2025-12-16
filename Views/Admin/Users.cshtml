@@ -62,7 +62,9 @@
             <tr>
                 <td>@u.Email</td>
                 <td>@u.UserName</td>
-                <td>@u.Name @u.LastName</td>
+                <td>@u.Name</td>
+                <td>@u.LastName</td>
+
                 <td>
                     @if (u.Roles.Count == 0)
                     {
@@ -72,10 +74,11 @@
                     {
                         foreach (var r in u.Roles)
                         {
-                            <span class="badge @(r=="Admin" ? "bg-success" : "bg-secondary") me-1">@r</span>
+                            <span class="badge @(r == "Admin" ? "bg-success" : "bg-secondary") me-1">@r</span>
                         }
                     }
                 </td>
+
                 <td>@u.CreatedAt.ToString("yyyy-MM-dd HH:mm")</td>
                 <td>@u.UpdatedAt.ToString("yyyy-MM-dd HH:mm")</td>
 
@@ -92,29 +95,28 @@
                     </form>
 
                     <a class="btn btn-sm btn-outline-primary"
-                        asp-action="ResetPassword"
-                        asp-route-id="@u.Id"
-                        asp-route-q="@Model.Q"
-                        asp-route-page="@Model.Page"
-                        asp-route-pageSize="@Model.PageSize">
+                       asp-action="ResetPassword"
+                       asp-route-id="@u.Id"
+                       asp-route-q="@Model.Q"
+                       asp-route-page="@Model.Page"
+                       asp-route-pageSize="@Model.PageSize">
                         Reset Password
                     </a>
 
                     <form asp-action="DeleteUser" method="post" class="d-inline"
-                    onsubmit="return confirm('Delete this user? Cannot be undone.');">
+                          onsubmit="return confirm('Delete this user? Cannot be undone.');">
                         @Html.AntiForgeryToken()
                         <input type="hidden" name="id" value="@u.Id" />
                         <input type="hidden" name="q" value="@Model.Q" />
                         <input type="hidden" name="page" value="@Model.Page" />
                         <input type="hidden" name="pageSize" value="@Model.PageSize" />
-                        <button type="submit" class="btn btn-sm btn-danger">
-                            Delete
-                        </button>
+                        <button type="submit" class="btn btn-sm btn-danger">Delete</button>
                     </form>
                 </td>
             </tr>
         }
     </tbody>
+
 </table>
 
 <nav class="mt-3">

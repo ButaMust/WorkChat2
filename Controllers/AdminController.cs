@@ -21,6 +21,73 @@ namespace WorkChat2.Controllers
 
         public IActionResult Index() => View();
 
+        // ----------------------------
+        // CREATE USER
+        // ----------------------------
+
+        // GET: /Admin/CreateUser
+        [HttpGet]
+        public IActionResult CreateUser()
+        {
+            return View();
+        }
+
+        // POST: /Admin/CreateUser
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> CreateUser(CreateUserViewModel model)
+        {
+            if (!ModelState.IsValid)
+                return View(model);
+
+            var existing = await _userManager.FindByEmailAsync(model.Email);
+            if (existing != null)
+            {
+                ModelState.AddModelError("", "A user with this email already exists.");
+                return View(model);
+            }
+
+            // IMPORTANT: Use Email as UserName so default Identity login works with email
+            var user = new AppUser
+            {
+                UserName = model.Email,
+                Email = model.Email,
+                Name = model.Name,
+                LastName = model.LastName,
+                EmailConfirmed = true
+            };
+
+            var createResult = await _userManager.CreateAsync(user, model.Password);
+
+            if (!createResult.Succeeded)
+            {
+                foreach (var error in createResult.Errors)
+                    ModelState.AddModelError("", error.Description);
+
+                return View(model);
+            }
+
+            if (model.IsAdmin)
+            {
+                if (!await _roleManager.RoleExistsAsync("Admin"))
+                    await _roleManager.CreateAsync(new IdentityRole("Admin"));
+
+                var roleResult = await _userManager.AddToRoleAsync(user, "Admin");
+                if (!roleResult.Succeeded)
+                {
+                    TempData["Error"] = string.Join(" | ", roleResult.Errors.Select(e => e.Description));
+                    return RedirectToAction(nameof(Users));
+                }
+            }
+
+            TempData["Success"] = $"Created user {user.Email}.";
+            return RedirectToAction(nameof(Users));
+        }
+
+        // ----------------------------
+        // USERS LIST
+        // ----------------------------
+
         // GET: /Admin/Users?q=...&page=1&pageSize=10
         [HttpGet]
         public async Task<IActionResult> Users(string? q, int page = 1, int pageSize = 10)
@@ -78,6 +145,10 @@ namespace WorkChat2.Controllers
             return View(vm);
         }
 
+        // ----------------------------
+        // TOGGLE ADMIN
+        // ----------------------------
+
         // POST: /Admin/ToggleAdmin
         [HttpPost]
         [ValidateAntiForgeryToken]
@@ -106,6 +177,10 @@ namespace WorkChat2.Controllers
 
             return RedirectToAction(nameof(Users), new { q, page, pageSize });
         }
+
+        // ----------------------------
+        // RESET PASSWORD
+        // ----------------------------
 
         // GET: /Admin/ResetPassword?id=...
         [HttpGet]
@@ -170,6 +245,10 @@ namespace WorkChat2.Controllers
             TempData["Success"] = $"Password reset for {user.Email}.";
             return RedirectToAction(nameof(Users), new { q, page, pageSize });
         }
+
+        // ----------------------------
+        // DELETE USER
+        // ----------------------------
 
         // POST: /Admin/DeleteUser
         [HttpPost]
