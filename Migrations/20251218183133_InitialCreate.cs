@@ -76,6 +76,31 @@ namespace WorkChat2.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "Announcements",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    Title = table.Column<string>(type: "nvarchar(120)", maxLength: 120, nullable: false),
+                    Body = table.Column<string>(type: "nvarchar(2000)", maxLength: 2000, nullable: false),
+                    IsPinned = table.Column<bool>(type: "bit", nullable: false, defaultValue: false),
+                    IsPublished = table.Column<bool>(type: "bit", nullable: false, defaultValue: true),
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false, defaultValueSql: "GETUTCDATE()"),
+                    UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: false, defaultValueSql: "GETUTCDATE()"),
+                    CreatedByUserId = table.Column<string>(type: "nvarchar(450)", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Announcements", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Announcements_AspNetUsers_CreatedByUserId",
+                        column: x => x.CreatedByUserId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.SetNull);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "AspNetUserClaims",
                 columns: table => new
                 {
@@ -249,12 +274,17 @@ namespace WorkChat2.Migrations
             migrationBuilder.InsertData(
                 table: "AspNetUsers",
                 columns: new[] { "Id", "AccessFailedCount", "ConcurrencyStamp", "CreatedAt", "Email", "EmailConfirmed", "LastName", "LockoutEnabled", "LockoutEnd", "Name", "NormalizedEmail", "NormalizedUserName", "PasswordHash", "PhoneNumber", "PhoneNumberConfirmed", "SecurityStamp", "TwoFactorEnabled", "UpdatedAt", "UserName" },
-                values: new object[] { "ADMIN_USER_ID", 0, "fe13026b-1c98-40e0-ad16-2574febeaf45", new DateTime(2025, 12, 11, 19, 33, 18, 608, DateTimeKind.Utc).AddTicks(3753), "admin@local", true, "User", false, null, "Admin", "ADMIN@LOCAL", "ADMIN@LOCAL", "AQAAAAIAAYagAAAAEBll0aRPfRQwxp8FiEvarTTv8AljalBsdw1EedmJImr3jXqCdlbM5Arv/ejmw9zCrw==", null, false, "825fa68b-1d60-4cb1-83da-c9898909e489", false, new DateTime(2025, 12, 11, 19, 33, 18, 608, DateTimeKind.Utc).AddTicks(3755), "admin@local" });
+                values: new object[] { "ADMIN_USER_ID", 0, "7cca39f4-7c0a-437a-bab9-68eaca6246ad", new DateTime(2025, 12, 18, 18, 31, 32, 457, DateTimeKind.Utc).AddTicks(6937), "admin@local", true, "User", false, null, "Admin", "ADMIN@LOCAL", "ADMIN@LOCAL", "AQAAAAIAAYagAAAAEKKjl6XNRmic5yg+VaHkKyIUSQVNOiu/R+QStCkPtAoRFB1UvBfkimSgOwtcZCEyBw==", null, false, "90d396b6-3cc3-49f1-b4e7-f16ba759e658", false, new DateTime(2025, 12, 18, 18, 31, 32, 457, DateTimeKind.Utc).AddTicks(6939), "admin@local" });
 
             migrationBuilder.InsertData(
                 table: "AspNetUserRoles",
                 columns: new[] { "RoleId", "UserId" },
                 values: new object[] { "ADMIN_ROLE_ID", "ADMIN_USER_ID" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Announcements_CreatedByUserId",
+                table: "Announcements",
+                column: "CreatedByUserId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_AspNetRoleClaims_RoleId",
@@ -319,6 +349,9 @@ namespace WorkChat2.Migrations
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.DropTable(
+                name: "Announcements");
+
             migrationBuilder.DropTable(
                 name: "AspNetRoleClaims");
 

@@ -1,0 +1,40 @@
+﻿@model WorkChat2.Models.Announcement
+
+@{
+    ViewData["Title"] = "Create Announcement";
+}
+
+<h1>Create Announcement</h1>
+
+<form asp-action="Create" method="post">
+    @Html.AntiForgeryToken()
+
+    <div class="mb-3">
+        <label asp-for="Title" class="form-label"></label>
+        <input asp-for="Title" class="form-control" />
+        <span asp-validation-for="Title" class="text-danger"></span>
+    </div>
+
+    <div class="mb-3">
+        <label asp-for="Body" class="form-label"></label>
+        <textarea asp-for="Body" class="form-control" rows="5"></textarea>
+        <span asp-validation-for="Body" class="text-danger"></span>
+    </div>
+
+    <div class="form-check mb-2">
+        <input asp-for="IsPinned" class="form-check-input" />
+        <label asp-for="IsPinned" class="form-check-label"></label>
+    </div>
+
+    <div class="form-check mb-3">
+        <input asp-for="IsPublished" class="form-check-input" />
+        <label asp-for="IsPublished" class="form-check-label"></label>
+    </div>
+
+    <button type="submit" class="btn btn-primary">Create</button>
+    <a asp-action="Index" class="btn btn-secondary">Cancel</a>
+</form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

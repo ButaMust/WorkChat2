@@ -1,0 +1,75 @@
+﻿@model List<WorkChat2.Models.Announcement>
+
+@{
+    ViewData["Title"] = "Announcements";
+}
+
+<h1 class="mb-3">Announcements</h1>
+
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success">@TempData["Success"]</div>
+}
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger">@TempData["Error"]</div>
+}
+
+<p>
+    <a class="btn btn-primary"
+       asp-controller="AdminAnnouncements"
+       asp-action="Create">
+        Create Announcement
+    </a>
+</p>
+
+@if (!Model.Any())
+{
+    <div class="alert alert-info">No announcements yet.</div>
+}
+else
+{
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Title</th>
+                <th>Pinned</th>
+                <th>Published</th>
+                <th>Created</th>
+                <th class="text-end">Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var a in Model)
+            {
+                <tr>
+                    <td>@a.Title</td>
+                    <td>@a.IsPinned</td>
+                    <td>@a.IsPublished</td>
+                    <td>@a.CreatedAt.ToLocalTime().ToString("dd MMM yyyy HH:mm")</td>
+                    <td class="text-end">
+                        <a class="btn btn-sm btn-secondary"
+                           asp-controller="AdminAnnouncements"
+                           asp-action="Edit"
+                           asp-route-id="@a.Id">
+                            Edit
+                        </a>
+
+                        <form class="d-inline"
+                              method="post"
+                              asp-controller="AdminAnnouncements"
+                              asp-action="Delete"
+                              asp-route-id="@a.Id">
+                            @Html.AntiForgeryToken()
+                            <button class="btn btn-sm btn-danger"
+                                    type="submit"
+                                    onclick="return confirm('Delete this announcement?');">
+                                Delete
+                            </button>
+                        </form>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}

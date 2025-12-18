@@ -170,6 +170,54 @@ namespace WorkChat2.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
+            modelBuilder.Entity("WorkChat2.Models.Announcement", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Body")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("GETUTCDATE()");
+
+                    b.Property<string>("CreatedByUserId")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<bool>("IsPinned")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
+
+                    b.Property<bool>("IsPublished")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true);
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("nvarchar(120)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("GETUTCDATE()");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedByUserId");
+
+                    b.ToTable("Announcements");
+                });
+
             modelBuilder.Entity("WorkChat2.Models.AppUser", b =>
                 {
                     b.Property<string>("Id")
@@ -257,8 +305,8 @@ namespace WorkChat2.Migrations
                         {
                             Id = "ADMIN_USER_ID",
                             AccessFailedCount = 0,
-                            ConcurrencyStamp = "fe13026b-1c98-40e0-ad16-2574febeaf45",
-                            CreatedAt = new DateTime(2025, 12, 11, 19, 33, 18, 608, DateTimeKind.Utc).AddTicks(3753),
+                            ConcurrencyStamp = "7cca39f4-7c0a-437a-bab9-68eaca6246ad",
+                            CreatedAt = new DateTime(2025, 12, 18, 18, 31, 32, 457, DateTimeKind.Utc).AddTicks(6937),
                             Email = "admin@local",
                             EmailConfirmed = true,
                             LastName = "User",
@@ -266,11 +314,11 @@ namespace WorkChat2.Migrations
                             Name = "Admin",
                             NormalizedEmail = "ADMIN@LOCAL",
                             NormalizedUserName = "ADMIN@LOCAL",
-                            PasswordHash = "AQAAAAIAAYagAAAAEBll0aRPfRQwxp8FiEvarTTv8AljalBsdw1EedmJImr3jXqCdlbM5Arv/ejmw9zCrw==",
+                            PasswordHash = "AQAAAAIAAYagAAAAEKKjl6XNRmic5yg+VaHkKyIUSQVNOiu/R+QStCkPtAoRFB1UvBfkimSgOwtcZCEyBw==",
                             PhoneNumberConfirmed = false,
-                            SecurityStamp = "825fa68b-1d60-4cb1-83da-c9898909e489",
+                            SecurityStamp = "90d396b6-3cc3-49f1-b4e7-f16ba759e658",
                             TwoFactorEnabled = false,
-                            UpdatedAt = new DateTime(2025, 12, 11, 19, 33, 18, 608, DateTimeKind.Utc).AddTicks(3755),
+                            UpdatedAt = new DateTime(2025, 12, 18, 18, 31, 32, 457, DateTimeKind.Utc).AddTicks(6939),
                             UserName = "admin@local"
                         });
                 });
@@ -432,6 +480,16 @@ namespace WorkChat2.Migrations
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("WorkChat2.Models.Announcement", b =>
+                {
+                    b.HasOne("WorkChat2.Models.AppUser", "CreatedByUser")
+                        .WithMany()
+                        .HasForeignKey("CreatedByUserId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("CreatedByUser");
                 });
 
             modelBuilder.Entity("WorkChat2.Models.ChatRoom", b =>

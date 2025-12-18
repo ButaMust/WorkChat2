@@ -1,21 +1,32 @@
 using System.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using WorkChat2.Data;
 using WorkChat2.Models;
 
-namespace WorkChat.Controllers
+namespace WorkChat2.Controllers
 {
     public class HomeController : Controller
     {
         private readonly ILogger<HomeController> _logger;
+        private readonly AppDbContext _db;
 
-        public HomeController(ILogger<HomeController> logger)
+        public HomeController(ILogger<HomeController> logger, AppDbContext db)
         {
             _logger = logger;
+            _db = db;
         }
 
-        public IActionResult Index()
+        public async Task<IActionResult> Index()
         {
-            return View();
+            var announcements = await _db.Announcements
+                .Where(a => a.IsPublished)
+                .OrderByDescending(a => a.IsPinned)
+                .ThenByDescending(a => a.CreatedAt)
+                .Take(5)
+                .ToListAsync();
+
+            return View(announcements);
         }
 
         public IActionResult Privacy()

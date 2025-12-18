@@ -17,6 +17,7 @@ namespace WorkChat2.Data
         public DbSet<ChatRoom> ChatRooms { get; set; } = null!;
         public DbSet<ChatRoomParticipant> ChatRoomParticipants { get; set; } = null!;
         public DbSet<Message> Messages { get; set; } = null!;
+        public DbSet<Announcement> Announcements { get; set; } = null!;
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
@@ -77,6 +78,32 @@ namespace WorkChat2.Data
             });
 
             // ==========================
+            // ANNOUNCMENT
+            // ==========================
+
+            builder.Entity<Announcement>(entity =>
+            {
+                entity.HasKey(a => a.Id);
+
+                entity.Property(a => a.Title)
+                      .HasMaxLength(120);
+
+                entity.Property(a => a.Body)
+                      .HasMaxLength(2000);
+
+                entity.Property(a => a.IsPinned)
+                      .HasDefaultValue(false);
+
+                entity.Property(a => a.IsPublished)
+                      .HasDefaultValue(true);
+                
+                entity.HasOne(a => a.CreatedByUser)
+                      .WithMany()
+                      .HasForeignKey(a => a.CreatedByUserId)
+                      .OnDelete(DeleteBehavior.SetNull);
+            });
+
+            // ==========================
             // DEFAULT VALUES FOR CreatedAt / UpdatedAt
             // (SQL Server – GETUTCDATE())
             // ==========================
@@ -107,6 +134,13 @@ namespace WorkChat2.Data
             builder.Entity<AppUser>()
                 .Property(u => u.UpdatedAt)
                 .HasDefaultValueSql("GETUTCDATE()");
+
+            builder.Entity<Announcement>()
+                   .Property(a => a.CreatedAt)
+                   .HasDefaultValueSql("GETUTCDATE()");
+            builder.Entity<Announcement>()
+                   .Property(a => a.UpdatedAt)
+                   .HasDefaultValueSql("GETUTCDATE()");
 
             // ==========================
             // SEED ADMIN ROLE + ADMIN USER

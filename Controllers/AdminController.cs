@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using WorkChat2.Models;
 using WorkChat2.ViewModels;
+using WorkChat2.Data;
 
 namespace WorkChat2.Controllers
 {
@@ -12,11 +13,13 @@ namespace WorkChat2.Controllers
     {
         private readonly UserManager<AppUser> _userManager;
         private readonly RoleManager<IdentityRole> _roleManager;
+        private readonly AppDbContext _db;
 
-        public AdminController(UserManager<AppUser> userManager, RoleManager<IdentityRole> roleManager)
+        public AdminController(UserManager<AppUser> userManager, RoleManager<IdentityRole> roleManager, AppDbContext db)
         {
             _userManager = userManager;
             _roleManager = roleManager;
+            _db = db;
         }
 
         public IActionResult Index() => View();
@@ -280,5 +283,18 @@ namespace WorkChat2.Controllers
 
             return RedirectToAction(nameof(Users), new { q, page, pageSize });
         }
+
+        // GET: /Admin/Announcements
+        [HttpGet]
+        public async Task<IActionResult> Announcements()
+        {
+            var items = await _db.Announcements
+                .OrderByDescending(a => a.IsPinned)
+                .ThenByDescending(a => a.CreatedAt)
+                .ToListAsync();
+
+            return View(items); // will look in Views/Admin/Announcements.cshtml
+        }
+
     }
 }
