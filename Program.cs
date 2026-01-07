@@ -33,6 +33,7 @@ namespace WorkChat2
             // 3) MVC + Razor Pages (Identity UI uses Razor Pages)
             builder.Services.AddControllersWithViews();
             builder.Services.AddRazorPages();
+            builder.Services.AddSignalR();
 
             var app = builder.Build();
 
@@ -66,6 +67,8 @@ namespace WorkChat2
                     context.Response.Redirect("/Home/Index");
                 }
             });
+
+            app.MapHub<WorkChat2.Hubs.ChatHub>("/hubs/chat");
 
             // MVC route
             app.MapControllerRoute(

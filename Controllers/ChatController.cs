@@ -8,6 +8,7 @@ using WorkChat2.ViewModels;
 
 namespace WorkChat2.Controllers
 {
+    [Authorize]
     public class ChatController : Controller
     {
         private readonly AppDbContext _db;
@@ -41,12 +42,15 @@ namespace WorkChat2.Controllers
         }
 
         // Open a room
+        [Authorize]
         public async Task<IActionResult> Room(int id)
         {
-            var userId = _userManager?.GetUserId(User)!;
+            var userId = _userManager.GetUserId(User)!;
 
-            var isMember = await _db.ChatRoomParticipants.AnyAsync(p => p.ChatRoomId == id && p.UserId == userId);
-            if (isMember) return Forbid();
+            var isMember = await _db.ChatRoomParticipants
+                .AnyAsync(p => p.ChatRoomId == id && p.UserId == userId);
+
+            if (!isMember) return Forbid();
 
             var room = await _db.ChatRooms
                 .AsNoTracking()
@@ -59,6 +63,47 @@ namespace WorkChat2.Controllers
             };
 
             return View(vm);
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> CreateDirect(string otherUserId)
+        {
+            var myId = _userManager.GetUserId(User)!;
+            if(string.IsNullOrWhiteSpace(otherUserId) || otherUserId == myId)
+                return BadRequest();
+
+            // find existing direct room between these two
+            var existingRoomId = await _db.ChatRooms
+                .Where(r => !r.IsGroup)
+                .Where(r => _db.ChatRoomParticipants.Count(p => p.ChatRoomId == r.Id) == 2)
+                .Where(r =>
+                    _db.ChatRoomParticipants.Any(p => p.ChatRoomId == r.Id && p.UserId == myId) &&
+                    _db.ChatRoomParticipants.Any(p => p.ChatRoomId == r.Id && p.UserId == otherUserId)
+                )
+                .Select(r => r.Id)
+                .FirstOrDefaultAsync();
+
+            if (existingRoomId != 0)
+                return RedirectToAction("Room", new { id = existingRoomId });
+
+            var room = new ChatRoom
+            {
+                IsGroup = false,
+                Name = null,
+                CreatedByUserId = myId
+            };
+
+            _db.ChatRooms.Add(room);
+            await _db.SaveChangesAsync();
+
+            _db.ChatRoomParticipants.AddRange(
+                new ChatRoomParticipant { ChatRoomId = room.Id, UserId = myId, IsAdmin = false },
+                new ChatRoomParticipant { ChatRoomId = room.Id, UserId = otherUserId, IsAdmin = false }
+            );
+
+            await _db.SaveChangesAsync();
+
+            return RedirectToAction("Room", new { id = room.Id });
         }
     }
 }

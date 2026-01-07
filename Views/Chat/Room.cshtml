@@ -1,0 +1,63 @@
+﻿@model WorkChat2.ViewModels.ChatRoomVm
+@{
+    ViewData["Title"] = Model.RoomTitle;
+}
+
+<h2>@Model.RoomTitle</h2>
+
+<div id="chat" style="border:1px solid #ccc; padding:10px; height:400px; overflow:auto;"></div>
+
+<div style="margin-top:10px;">
+    <input id="msg" type="text" style="width:80%;" placeholder="Type a message..." />
+    <button id="send">Send</button>
+</div>
+
+<input type="hidden" id="roomId" value="@Model.RoomId" />
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/microsoft/signalr@8.0.7/dist/browser/signalr.min.js"></script>
+    <script>
+        const roomId = parseInt(document.getElementById("roomId").value);
+        const chat = document.getElementById("chat");
+        const msgInput = document.getElementById("msg");
+        const sendBtn = document.getElementById("send");
+
+        function addLine(line) {
+            const div = document.createElement("div");
+            div.textContent = line;
+            chat.appendChild(div);
+            chat.scrollTop = chat.scrollHeight;
+        }
+
+        const connection = new signalR.HubConnectionBuilder()
+            .withUrl("/hubs/chat")
+            .withAutomaticReconnect()
+            .build();
+
+        connection.on("MessageReceived", (m) => {
+            addLine(`${m.senderName}: ${m.text}`);
+        });
+
+        async function start() {
+            await connection.start();
+            await connection.invoke("JoinRoom", roomId);
+
+            // load last messages
+            const recent = await connection.invoke("GetRecentMessages", roomId, 50);
+            recent.forEach(m => addLine(`${m.senderId}: ${m.text}`));
+        }
+
+        sendBtn.addEventListener("click", async () => {
+            const text = msgInput.value.trim();
+            if (!text) return;
+            msgInput.value = "";
+            await connection.invoke("SendMessage", roomId, text);
+        });
+
+        msgInput.addEventListener("keydown", (e) => {
+            if (e.key === "Enter") sendBtn.click();
+        });
+
+        start().catch(err => addLine("Error: " + err));
+    </script>
+}

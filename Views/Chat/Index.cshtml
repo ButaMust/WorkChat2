@@ -1,0 +1,25 @@
+﻿@model List<WorkChat2.ViewModels.ChatRoomListItemVm>
+@{
+    ViewData["Title"] = "Chats";
+}
+
+<h1>Chats</h1>
+
+@if (!Model.Any())
+{
+    <p>No chats yet.</p>
+}
+else
+{
+    <ul>
+        @foreach (var r in Model)
+        {
+            <li>
+                <a asp-controller="Chat" asp-action="Room" asp-route-id="@r.Id">
+                    @r.Name
+                </a>
+                <small>(updated: @r.LastUpdatedUtc.ToString("u"))</small>
+            </li>
+        }
+    </ul>
+}
