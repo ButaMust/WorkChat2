@@ -7,26 +7,49 @@
 
 <div id="chat" style="border:1px solid #ccc; padding:10px; height:400px; overflow:auto;"></div>
 
-<div style="margin-top:10px;">
-    <input id="msg" type="text" style="width:80%;" placeholder="Type a message..." />
-    <button id="send">Send</button>
+<div style="margin-top:10px; display:flex; gap:10px;">
+    <input id="msg" type="text" style="flex:1;" placeholder="Type a message..." autocomplete="off" />
+    <button id="send" type="button">Send</button>
 </div>
 
 <input type="hidden" id="roomId" value="@Model.RoomId" />
 
 @section Scripts {
-    <script src="https://cdn.jsdelivr.net/npm/microsoft/signalr@8.0.7/dist/browser/signalr.min.js"></script>
+    <script src="~/lib/signalr/signalr.min.js"></script>
+
     <script>
-        const roomId = parseInt(document.getElementById("roomId").value);
+        // --- helpers ---
         const chat = document.getElementById("chat");
+        function addLine(text) {
+            const div = document.createElement("div");
+            div.textContent = text;
+            chat.appendChild(div);
+            chat.scrollTop = chat.scrollHeight;
+        }
+
+        console.log("Room script loaded");
+
+        const roomIdEl = document.getElementById("roomId");
         const msgInput = document.getElementById("msg");
         const sendBtn = document.getElementById("send");
 
-        function addLine(line) {
-            const div = document.createElement("div");
-            div.textContent = line;
-            chat.appendChild(div);
-            chat.scrollTop = chat.scrollHeight;
+        // Hard fail if your HTML is wrong
+        if (!roomIdEl || !chat || !msgInput || !sendBtn) {
+            console.error("Missing elements:", { roomIdEl, chat, msgInput, sendBtn });
+            alert("Missing required IDs. Need: #roomId #chat #msg #send");
+            throw new Error("Missing required DOM elements");
+        }
+
+        // SignalR must be loaded
+        if (!window.signalR) {
+            addLine("SignalR not loaded. The script didn't load.");
+            throw new Error("signalR is not defined");
+        }
+
+        const roomId = parseInt(roomIdEl.value, 10);
+        if (!Number.isFinite(roomId)) {
+            addLine("Invalid roomId on page.");
+            throw new Error("Invalid roomId");
         }
 
         const connection = new signalR.HubConnectionBuilder()
@@ -35,29 +58,53 @@
             .build();
 
         connection.on("MessageReceived", (m) => {
+            console.log("MessageReceived", m);
             addLine(`${m.senderName}: ${m.text}`);
         });
 
         async function start() {
-            await connection.start();
-            await connection.invoke("JoinRoom", roomId);
+            try {
+                addLine("Connecting...");
+                await connection.start();
+                addLine("Connected.");
 
-            // load last messages
-            const recent = await connection.invoke("GetRecentMessages", roomId, 50);
-            recent.forEach(m => addLine(`${m.senderId}: ${m.text}`));
+                await connection.invoke("JoinRoom", roomId);
+                addLine("Joined room.");
+
+                const recent = await connection.invoke("GetRecentMessages", roomId, 50);
+                (recent || []).forEach(m => addLine(`${m.senderId}: ${m.text}`));
+            } catch (err) {
+                console.error(err);
+                addLine("Startup error: " + (err?.message ?? err));
+            }
         }
 
-        sendBtn.addEventListener("click", async () => {
+        async function sendCurrentMessage() {
             const text = msgInput.value.trim();
             if (!text) return;
-            msgInput.value = "";
-            await connection.invoke("SendMessage", roomId, text);
+
+            try {
+                await connection.invoke("SendMessage", roomId, text);
+                msgInput.value = "";
+                msgInput.focus();
+            } catch (err) {
+                console.error(err);
+                addLine("Send failed: " + (err?.message ?? err));
+            }
+        }
+
+        sendBtn.addEventListener("click", () => {
+            console.log("Send clicked");
+            sendCurrentMessage();
         });
 
         msgInput.addEventListener("keydown", (e) => {
-            if (e.key === "Enter") sendBtn.click();
+            if (e.key === "Enter") {
+                e.preventDefault();
+                sendCurrentMessage();
+            }
         });
 
-        start().catch(err => addLine("Error: " + err));
+        start();
     </script>
 }

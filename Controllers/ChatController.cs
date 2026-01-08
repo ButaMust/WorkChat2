@@ -20,19 +20,21 @@ namespace WorkChat2.Controllers
             _userManager = userManager;
         }
 
-        // Shows list of rooms current user is in
+        // GET: /Chat
+        [HttpGet]
         public async Task<IActionResult> Index()
         {
             var userId = _userManager.GetUserId(User)!;
 
             var rooms = await _db.ChatRoomParticipants
+                .AsNoTracking()
                 .Where(p => p.UserId == userId)
                 .Select(p => p.ChatRoom)
                 .OrderByDescending(r => r.UpdatedAt)
                 .Select(r => new ChatRoomListItemVm
                 {
                     Id = r.Id,
-                    Name = r.IsGroup ? (r.Name ?? "UnNamed Group") : "Direct Chat",
+                    Name = r.IsGroup ? (r.Name ?? "Unnamed Group") : "Direct Chat",
                     IsGroup = r.IsGroup,
                     LastUpdatedUtc = r.UpdatedAt,
                 })
@@ -41,39 +43,50 @@ namespace WorkChat2.Controllers
             return View(rooms);
         }
 
-        // Open a room
-        [Authorize]
+        // GET: /Chat/Room/5
+        [HttpGet]
         public async Task<IActionResult> Room(int id)
         {
             var userId = _userManager.GetUserId(User)!;
 
             var isMember = await _db.ChatRoomParticipants
+                .AsNoTracking()
                 .AnyAsync(p => p.ChatRoomId == id && p.UserId == userId);
 
             if (!isMember) return Forbid();
 
             var room = await _db.ChatRooms
                 .AsNoTracking()
-                .FirstAsync(r => r.Id == id);
+                .FirstOrDefaultAsync(r => r.Id == id);
+
+            if (room == null) return NotFound();
 
             var vm = new ChatRoomVm
             {
                 RoomId = room.Id,
-                RoomTitle = room.IsGroup ? (room.Name ?? "UnNamed Group") : "Direct Chat"
+                RoomTitle = room.IsGroup ? (room.Name ?? "Unnamed Group") : "Direct Chat"
             };
 
             return View(vm);
         }
 
+        // POST: /Chat/CreateDirect
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> CreateDirect(string otherUserId)
         {
             var myId = _userManager.GetUserId(User)!;
-            if(string.IsNullOrWhiteSpace(otherUserId) || otherUserId == myId)
+
+            if (string.IsNullOrWhiteSpace(otherUserId) || otherUserId == myId)
                 return BadRequest();
 
-            // find existing direct room between these two
+            // optional safety: ensure the other user exists
+            var otherExists = await _db.Users.AsNoTracking().AnyAsync(u => u.Id == otherUserId);
+            if (!otherExists) return NotFound();
+
+            // find existing direct room between these two (exactly 2 participants)
             var existingRoomId = await _db.ChatRooms
+                .AsNoTracking()
                 .Where(r => !r.IsGroup)
                 .Where(r => _db.ChatRoomParticipants.Count(p => p.ChatRoomId == r.Id) == 2)
                 .Where(r =>

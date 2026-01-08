@@ -1,0 +1,35 @@
+﻿@using System.Security.Claims
+
+@model WorkChat2.ViewModels.CreateChatRoomVm
+@{
+    ViewData["Title"] = "Create Chat Room";
+}
+
+<h1>Create Group Chat</h1>
+
+<form method="post">
+    <div>
+        <label>Group Name</label><br />
+        <input asp-for="Name" />
+        <span asp-validation-for="Name"></span>
+    </div>
+
+    <div style="margin-top:10px;">
+        <label>Select users</label><br />
+        @foreach (var u in Model.Users.Where(u =>
+                u.Id != User.FindFirstValue(ClaimTypes.NameIdentifier)))
+        {
+            <div>
+                <input type="checkbox" name="SelectedUserIds" value="@u.Id" />
+                @u.UserName
+            </div>
+        }
+    </div>
+
+
+    <button type="submit" style="margin-top:10px;">Create</button>
+</form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

@@ -1,25 +1,41 @@
 ﻿@model List<WorkChat2.ViewModels.ChatRoomListItemVm>
 @{
-    ViewData["Title"] = "Chats";
+    ViewData["Title"] = "My Chats";
 }
 
-<h1>Chats</h1>
+<h1>My Chats</h1>
 
 @if (!Model.Any())
 {
-    <p>No chats yet.</p>
+    <p>You are not in any chats yet.</p>
 }
 else
 {
-    <ul>
-        @foreach (var r in Model)
-        {
-            <li>
-                <a asp-controller="Chat" asp-action="Room" asp-route-id="@r.Id">
-                    @r.Name
-                </a>
-                <small>(updated: @r.LastUpdatedUtc.ToString("u"))</small>
-            </li>
-        }
-    </ul>
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Room</th>
+                <th>Type</th>
+                <th>Last Updated</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var r in Model)
+            {
+                <tr>
+                    <td>@r.Name</td>
+                    <td>@(r.IsGroup ? "Group" : "Direct")</td>
+                    <td>@r.LastUpdatedUtc.ToLocalTime().ToString("g")</td>
+                    <td>
+                        <a class="btn btn-sm btn-primary"
+                           asp-controller="Chat"
+                           asp-action="Room"
+                           asp-route-id="@r.Id">Open</a>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+        
 }

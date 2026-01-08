@@ -25,10 +25,23 @@
                         <li class="nav-item">
                             <a class="nav-link text-dark" asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
                         </li>
+                        @if (User.Identity?.IsAuthenticated == true)
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link" asp-controller="Chat" asp-action="Index">My Chats</a>
+                            </li>
+                        }
+
                         @if (User.IsInRole("Admin"))
                         {
                             <li class="nav-item">
                                 <a class="nav-link text-dark" asp-controller="Admin" asp-action="Users">Admin</a>
+                            </li>
+                        }
+                        @if (User.IsInRole("Admin"))
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link" asp-controller="ChatAdmin" asp-action="Create">Create Chat</a>
                             </li>
                         }
                     </ul>
