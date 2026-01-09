@@ -15,11 +15,14 @@
 <input type="hidden" id="roomId" value="@Model.RoomId" />
 
 @section Scripts {
-    <script src="~/lib/signalr/signalr.min.js"></script>
 
     <script>
-        // --- helpers ---
+        // --- DOM ---
         const chat = document.getElementById("chat");
+        const roomIdEl = document.getElementById("roomId");
+        const msgInput = document.getElementById("msg");
+        const sendBtn = document.getElementById("send");
+
         function addLine(text) {
             const div = document.createElement("div");
             div.textContent = text;
@@ -27,22 +30,17 @@
             chat.scrollTop = chat.scrollHeight;
         }
 
-        console.log("Room script loaded");
-
-        const roomIdEl = document.getElementById("roomId");
-        const msgInput = document.getElementById("msg");
-        const sendBtn = document.getElementById("send");
+        console.log("Room script loaded", { roomIdEl, chat, msgInput, sendBtn });
 
         // Hard fail if your HTML is wrong
         if (!roomIdEl || !chat || !msgInput || !sendBtn) {
-            console.error("Missing elements:", { roomIdEl, chat, msgInput, sendBtn });
             alert("Missing required IDs. Need: #roomId #chat #msg #send");
             throw new Error("Missing required DOM elements");
         }
 
         // SignalR must be loaded
         if (!window.signalR) {
-            addLine("SignalR not loaded. The script didn't load.");
+            addLine("SignalR not loaded. Check /wwwroot/lib/signalr/signalr.min.js");
             throw new Error("signalR is not defined");
         }
 
@@ -52,14 +50,41 @@
             throw new Error("Invalid roomId");
         }
 
+        // --- SignalR ---
         const connection = new signalR.HubConnectionBuilder()
             .withUrl("/hubs/chat")
             .withAutomaticReconnect()
             .build();
 
+        let joined = false;
+
+        function formatSender(m) {
+            // handle both realtime payload (senderName) and recent payload (maybe only senderId)
+            return m.senderName || m.senderId || "Unknown";
+        }
+
+        // IMPORTANT: this must match the server event name exactly: "MessageReceived"
         connection.on("MessageReceived", (m) => {
             console.log("MessageReceived", m);
-            addLine(`${m.senderName}: ${m.text}`);
+            addLine(`${formatSender(m)}: ${m.text}`);
+        });
+
+        connection.onreconnecting(err => {
+            console.warn("Reconnecting...", err);
+            joined = false;
+            addLine("Reconnecting...");
+        });
+
+        connection.onreconnected(async () => {
+            console.log("Reconnected");
+            try {
+                await connection.invoke("JoinRoom", roomId);
+                joined = true;
+                addLine("Re-joined room.");
+            } catch (err) {
+                console.error(err);
+                addLine("Re-join failed: " + (err?.message ?? err));
+            }
         });
 
         async function start() {
@@ -69,10 +94,13 @@
                 addLine("Connected.");
 
                 await connection.invoke("JoinRoom", roomId);
+                joined = true;
                 addLine("Joined room.");
 
                 const recent = await connection.invoke("GetRecentMessages", roomId, 50);
-                (recent || []).forEach(m => addLine(`${m.senderId}: ${m.text}`));
+                console.log("Recent", recent);
+
+                (recent || []).forEach(m => addLine(`${formatSender(m)}: ${m.text}`));
             } catch (err) {
                 console.error(err);
                 addLine("Startup error: " + (err?.message ?? err));
@@ -84,19 +112,26 @@
             if (!text) return;
 
             try {
+                // don't allow sending if we didn't join (or if we reconnected)
+                if (!joined) {
+                    await connection.invoke("JoinRoom", roomId);
+                    joined = true;
+                }
+
                 await connection.invoke("SendMessage", roomId, text);
                 msgInput.value = "";
                 msgInput.focus();
+
+                // OPTIONAL optimistic UI (enable if you want instant feedback even if broadcast fails)
+                // addLine(`Me: ${text}`);
+
             } catch (err) {
                 console.error(err);
                 addLine("Send failed: " + (err?.message ?? err));
             }
         }
 
-        sendBtn.addEventListener("click", () => {
-            console.log("Send clicked");
-            sendCurrentMessage();
-        });
+        sendBtn.addEventListener("click", () => sendCurrentMessage());
 
         msgInput.addEventListener("keydown", (e) => {
             if (e.key === "Enter") {

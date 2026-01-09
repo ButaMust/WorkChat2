@@ -39,7 +39,7 @@ namespace WorkChat2.Hubs
             if (text.Length == 0) return;
             if (text.Length > 2000) throw new HubException("Message too long.");
 
-            var userId = _userManager?.GetUserId(Context.User!)!;
+            var userId = _userManager.GetUserId(Context.User!)!;
 
             var isMember = await _db.ChatRoomParticipants.AnyAsync(p => p.ChatRoomId == roomId && p.UserId == userId);
 
@@ -66,7 +66,7 @@ namespace WorkChat2.Hubs
             var sender = await _userManager.GetUserAsync(Context.User!);
 
             await Clients.Group($"room:{roomId}")
-                .SendAsync("MessageRecived", new
+                .SendAsync("MessageReceived", new
                 {
                     id = msg.Id,
                     roomId,
@@ -100,6 +100,7 @@ namespace WorkChat2.Hubs
                     roomId = m.ChatRoomId,
                     text = m.Text,
                     senderId = m.SenderId,
+                    senderName = m.Sender.UserName,
                     CreatedAt = m.CreatedAt,
                 })
                 .ToListAsync();
