@@ -48,6 +48,13 @@
                                 <a class="nav-link" asp-controller="ChatAdmin" asp-action="Create">Create Chat</a>
                             </li>
                         }
+                        @if (User.IsInRole("Admin"))
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link" asp-controller="AdminAnnouncements" asp-action="Create">Create Announcement</a>
+                            </li>
+                        }
+
                         @if (SignInManager.IsSignedIn(User))
                         {
                             <li class="nav-item ms-auto">
