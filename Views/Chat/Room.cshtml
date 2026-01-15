@@ -3,14 +3,30 @@
     ViewData["Title"] = Model.RoomTitle;
 }
 
-<h2>@Model.RoomTitle</h2>
+<div class="chat-container">
 
-<div id="chat" style="border:1px solid #ccc; padding:10px; height:400px; overflow:auto;"></div>
+    <div class="chat-header">
+        @Model.RoomTitle
+    </div>
 
-<div style="margin-top:10px; display:flex; gap:10px;">
-    <input id="msg" type="text" style="flex:1;" placeholder="Type a message..." autocomplete="off" />
-    <button id="send" type="button">Send</button>
+    <div id="chat" class="chat-messages"></div>
+
+    <div class="chat-input">
+        <div class="chat-input-inner">
+            <input id="msg"
+                   type="text"
+                   class="form-control"
+                   placeholder="Type a message..."
+                   autocomplete="off" />
+
+            <button id="send" type="button" class="btn btn-primary">
+                Send
+            </button>
+        </div>
+    </div>
+
 </div>
+
 
 <input type="hidden" id="roomId" value="@Model.RoomId" />
 

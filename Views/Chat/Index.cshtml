@@ -3,39 +3,41 @@
     ViewData["Title"] = "My Chats";
 }
 
-<h1>My Chats</h1>
+<div class="" container mt-4">
+    <h1>My Chats</h1>
 
-@if (!Model.Any())
-{
-    <p>You are not in any chats yet.</p>
-}
-else
-{
-    <table class="table">
-        <thead>
-            <tr>
-                <th>Room</th>
-                <th>Type</th>
-                <th>Last Updated</th>
-                <th></th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var r in Model)
-            {
+    @if (!Model.Any())
+    {
+        <p>You are not in any chats yet.</p>
+    }
+    else
+    {
+        <table class="table">
+            <thead>
                 <tr>
-                    <td>@r.Name</td>
-                    <td>@(r.IsGroup ? "Group" : "Direct")</td>
-                    <td>@r.LastUpdatedUtc.ToLocalTime().ToString("g")</td>
-                    <td>
-                        <a class="btn btn-sm btn-primary"
-                           asp-controller="Chat"
-                           asp-action="Room"
-                           asp-route-id="@r.Id">Open</a>
-                    </td>
+                    <th>Room</th>
+                    <th>Type</th>
+                    <th>Last Updated</th>
+                    <th></th>
                 </tr>
-            }
-        </tbody>
-    </table>
+            </thead>
+            <tbody>
+                @foreach (var r in Model)
+                {
+                    <tr>
+                        <td>@r.Name</td>
+                        <td>@(r.IsGroup ? "Group" : "Direct")</td>
+                        <td>@r.LastUpdatedUtc.ToLocalTime().ToString("g")</td>
+                        <td>
+                            <a class="btn btn-sm btn-primary"
+                               asp-controller="Chat"
+                               asp-action="Room"
+                               asp-route-id="@r.Id">Open</a>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
         
-}
+    }
+</div>

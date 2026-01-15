@@ -1,0 +1,30 @@
+﻿@model WorkChat2.ViewModels.ProfileVm
+
+@{
+    ViewData["Title"] = "My Profile";
+}
+
+<h2 class="mb-4">My Profile</h2>
+
+<table class="table table-bordered w-auto">
+    <tr>
+        <th>Name</th>
+        <td>@Model.Name</td>
+    </tr>
+    <tr>
+        <th>Last Name</th>
+        <td>@Model.LastName</td>
+    </tr>
+    <tr>
+        <th>Username</th>
+        <td>@Model.UserName</td>
+    </tr>
+    <tr>
+        <th>Email</th>
+        <td>@Model.Email</td>
+    </tr>
+    <tr>
+        <th>Account Created</th>
+        <td>@Model.CreatedAt.ToLocalTime().ToString("dd MMM yyyy HH:mm")</td>
+    </tr>
+</table>
